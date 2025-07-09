@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain.vectorstores import Chroma
-from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
 from langchain.document_loaders import PyMuPDFLoader
 from langchain.memory import ConversationBufferMemory
@@ -25,47 +24,52 @@ st.title("🤖 My LangChain Chatbot")
 
 @st.cache_resource
 def load_chain():
-    # Load document
-    loader = PyMuPDFLoader("Calculus_Adams.pdf")
-    documents = loader.load()  # This creates one Document per PDF page ✅
+    # Load PDF pages
+    loader = PyMuPDFLoader("1_19015060131.pdf")
+    documents = loader.load()
 
-    # Better splitter for big docs
+    # Split each page
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,    # adjust as needed
+        chunk_size=1000,
         chunk_overlap=200
     )
-
-    # Split all pages into small chunks
     texts = text_splitter.split_documents(documents)
 
-    # Embeddings & Vector Store
+    print(f"Split into {len(texts)} chunks")
+
     embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
     persist_directory = "./chroma_db"
 
     if not os.path.exists(persist_directory):
         os.mkdir(persist_directory)
 
-    db = Chroma.from_documents(
-        texts, embeddings, persist_directory=persist_directory
+    # Create empty vector store
+    db = Chroma(
+        embedding_function=embeddings,
+        persist_directory=persist_directory
     )
+
+    # Batch upload chunks to avoid hitting token limit
+    batch_size = 100  # adjust if needed
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i+batch_size]
+        db.add_documents(batch)
 
     retriever = db.as_retriever()
 
-    # Memory
     memory = ConversationBufferMemory(
         memory_key="chat_history", return_messages=True
     )
 
-    # LLM
     llm = ChatOpenAI(temperature=0, openai_api_key=OPENAI_API_KEY)
 
-    # Conversational chain
     chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         retriever=retriever,
         memory=memory,
         verbose=False
     )
+
     return chain
 
 
