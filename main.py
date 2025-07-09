@@ -9,6 +9,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
 from langchain.document_loaders import PyMuPDFLoader
 from langchain.memory import ConversationBufferMemory
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # Silence noisy logs
 logging.getLogger("chromadb").setLevel(logging.WARNING)
@@ -21,15 +22,20 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 st.set_page_config(page_title="💬 My AI Chatbot", page_icon="🤖")
 st.title("🤖 My LangChain Chatbot")
 
-# Load and process data only once
+
 @st.cache_resource
 def load_chain():
     # Load document
     loader = PyMuPDFLoader("Calculus_Adams.pdf")
-    documents = loader.load()
+    documents = loader.load()  # This creates one Document per PDF page ✅
 
-    # Split text
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    # Better splitter for big docs
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,    # adjust as needed
+        chunk_overlap=200
+    )
+
+    # Split all pages into small chunks
     texts = text_splitter.split_documents(documents)
 
     # Embeddings & Vector Store
@@ -61,6 +67,7 @@ def load_chain():
         verbose=False
     )
     return chain
+
 
 # Load the chain
 chain = load_chain()
