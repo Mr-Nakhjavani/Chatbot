@@ -7,7 +7,7 @@ from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain.vectorstores import Chroma
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
-from langchain.document_loaders import TextLoader
+from langchain.document_loaders import PyMuPDFLoader
 from langchain.memory import ConversationBufferMemory
 
 # Silence noisy logs
@@ -25,7 +25,7 @@ st.title("🤖 My LangChain Chatbot")
 @st.cache_resource
 def load_chain():
     # Load document
-    loader = TextLoader("knowledge.txt")
+    loader = PyMuPDFLoader("Calculus_Adams.pdf")
     documents = loader.load()
 
     # Split text
